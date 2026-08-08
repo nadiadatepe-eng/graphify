@@ -52,6 +52,7 @@ EXPECTED_HANDLERS = {
     "label": "_cmd_cluster_only",
     "export": "_cmd_export",
     "provider": "_cmd_provider",
+    "extract": "_cmd_extract",
 }
 
 CLI_SRC = Path(__file__).parent.parent / "graphify" / "cli.py"
@@ -144,11 +145,18 @@ def test_every_handler_resolves_all_the_names_it_uses():
     )
 
 
-def test_table_is_consulted_before_the_chain():
-    # dispatch_command must look the table up first; otherwise a leftover branch
-    # would win and the table would be dead code.
+def test_table_is_consulted_first():
+    # dispatch_command must look the table up before anything else decides where
+    # a command goes; otherwise that other thing wins and the table is dead code.
+    #
+    # This used to compare against `    if cmd == `, the head of the if/elif
+    # chain.  Moving `extract` removed the last arm, so that string is gone and
+    # the assertion raised ValueError instead of passing -- the test was written
+    # for a shape the refactor was designed to destroy.  What is left to protect
+    # is the path fallback (`graphify <path>` -> extract).
     src = CLI_SRC.read_text(encoding="utf-8")
     body = src[src.index("def dispatch_command("):]
     lookup = body.index("TABLE.get(cmd)")
-    first_arm = body.index('    if cmd == ')
-    assert lookup < first_arm, "TABLE lookup must precede the if/elif chain"
+    others = [body.index(m) for m in ("    if cmd == ", "Path(cmd).exists()") if m in body]
+    assert others, "nothing dispatches after the table -- this test now proves nothing"
+    assert lookup < min(others), "TABLE lookup must come before any other dispatch decision"
