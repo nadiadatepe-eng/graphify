@@ -1121,12 +1121,13 @@ def test_hermes_skill_destination_posix_uses_home():
 def _cli_dispatched_commands() -> set[str]:
     """Subcommand names the CLI actually dispatches.
 
-    `graphify`'s dispatcher is an `elif cmd == "..."` chain rather than a declarative
-    table, so the set is read back out of the source. Used to prove a hook command
+    The dispatcher is half declarative table (``graphify.commands.TABLE``) and half
+    legacy `elif cmd == "..."` chain, so both sources are read: the table directly,
+    the remaining chain back out of the source. Used to prove a hook command
     written by an installer is not a stale/renamed subcommand (#2165).
     """
     import re
-    from graphify import cli
+    from graphify import cli, commands
 
     source = Path(cli.__file__).read_text(encoding="utf-8")
     names = set(re.findall(r'cmd\s*==\s*"([a-z0-9][a-z0-9-]*)"', source))
@@ -1135,7 +1136,7 @@ def _cli_dispatched_commands() -> set[str]:
         for group in re.findall(r'cmd\s+in\s+\(([^)]*)\)', source)
         for m in re.findall(r'"([a-z0-9][a-z0-9-]*)"', group)
     }
-    return names
+    return names | set(commands.TABLE)
 
 
 def test_codex_hook_command_is_a_real_cli_subcommand(tmp_path):
