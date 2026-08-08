@@ -1121,10 +1121,15 @@ def test_hermes_skill_destination_posix_uses_home():
 def _cli_dispatched_commands() -> set[str]:
     """Subcommand names the CLI actually dispatches.
 
-    The dispatcher is half declarative table (``graphify.commands.TABLE``) and half
-    legacy `elif cmd == "..."` chain, so both sources are read: the table directly,
-    the remaining chain back out of the source. Used to prove a hook command
-    written by an installer is not a stale/renamed subcommand (#2165).
+    The table (`graphify.commands.TABLE`) is the dispatcher; scraping `cli.py` for
+    `cmd == "..."` finds nothing today, because no arm is left. It is kept as a
+    forward guard: a command added straight back into `cli.py` as an `elif`, and
+    never registered in the table, would be dispatchable but invisible here --
+    and no other test would catch it, since the one that forbids leftover arms
+    only checks names that ARE in the table.
+
+    Used to prove a hook command written by an installer is not a stale/renamed
+    subcommand (#2165).
     """
     import re
     from graphify import cli, commands
